@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate } from '../lib/game.js';
+import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate, rpsOutcome, sanitizeRound, checkRpsRound } from '../lib/game.js';
 import { signSession, verifySession, hashPin, verifyPin, readCookie } from '../lib/auth.js';
 
 const players = [{ id: 1, name: 'Nolan', starting_cents: 0 }, { id: 2, name: 'Aurora', starting_cents: 0 }];
@@ -58,8 +58,7 @@ test('immunity splits the whole bill 50/50 across both players, same group', () 
 test('bad input is rejected', () => {
   assert.ok(validateSpend({ amount_cents: 12.5, category: 'dinner' }, 1, 2).error);
   assert.ok(validateSpend({ amount_cents: 100, category: 'nope' }, 1, 2).error);
-  assert.equal(validateSpend({ amount_cents: 100, category: 'dinner', via: 'rps' }, 1, 2).status, 501);
-  assert.ok(validateDeposit({ amount_cents: -5 }).error);
+    assert.ok(validateDeposit({ amount_cents: -5 }).error);
   assert.ok(validateDeposit({ amount_cents: '50' }).error);
 });
 
@@ -107,4 +106,43 @@ test('spends tied to a date must fit its scope', () => {
   assert.ok(checkSpendAgainstDate('dinner', { ...date, status: 'skipped' }));
   assert.ok(checkSpendAgainstDate('dinner', undefined));
   assert.ok(checkSpendAgainstDate('dinner', { ...date, deleted_at: 'x' }));
+});
+
+test('rock-paper-scissors outcomes', () => {
+  assert.equal(rpsOutcome('rock', 'scissors'), 'p1');
+  assert.equal(rpsOutcome('rock', 'paper'), 'p2');
+  assert.equal(rpsOutcome('scissors', 'paper'), 'p1');
+  assert.equal(rpsOutcome('paper', 'rock'), 'p1');
+  assert.equal(rpsOutcome('paper', 'paper'), 'tie');
+  assert.throws(() => rpsOutcome('rock', null));
+});
+
+test('an unresolved round never reveals anyone\'s move', () => {
+  const r = { id: 1, topic: 'pizza', started_by: 1, ties: 0, p1_move: 'rock', p2_move: null };
+  for (const me of [1, 2]) {
+    const s = sanitizeRound(r, me, 1);
+    assert.equal(JSON.stringify(s).includes('rock'), false);
+    assert.equal(s.resolved, false);
+  }
+  assert.equal(sanitizeRound(r, 1, 1).i_moved, true);
+  assert.equal(sanitizeRound(r, 1, 1).they_moved, false);
+  assert.equal(sanitizeRound(r, 2, 1).they_moved, true);
+  const done = sanitizeRound({ ...r, p2_move: 'paper', winner_id: 2, resolved_at: 'x' }, 1, 1);
+  assert.deepEqual([done.resolved, done.p1_move, done.p2_move, done.winner_id], [true, 'rock', 'paper', 2]);
+});
+
+test('only the winner can spend a decided, unused round', () => {
+  const round = { resolved_at: 'x', winner_id: 2 };
+  assert.equal(checkRpsRound(round, 2, false), null);
+  assert.match(checkRpsRound(round, 1, false), /winner/);
+  assert.match(checkRpsRound(round, 2, true), /already/);
+  assert.match(checkRpsRound({ ...round, resolved_at: null }, 2, false), /not been decided/);
+  assert.ok(checkRpsRound(undefined, 2, false));
+  assert.ok(checkRpsRound({ ...round, cancelled_at: 'x' }, 2, false));
+});
+
+test('rps spend charges the winner and needs a round id', () => {
+  assert.ok(validateSpend({ amount_cents: 100, category: 'dinner', via: 'rps' }, 1, 2).error);
+  const v = validateSpend({ amount_cents: 5000, category: 'dinner', via: 'rps', rps_round_id: 7 }, 2, 1);
+  assert.deepEqual(v.rows.map((r) => [r.player_id, r.proposed_by, r.rps_round_id, r.via]), [[2, 2, 7, 'rps']]);
 });

@@ -56,6 +56,14 @@
       <ul id="dateHist" class="feed"></ul>
     </div>
 
+    <div class="card" id="rpsCard">
+      <h2>Rock · Paper · Scissors</h2>
+      <div class="mute" style="margin-bottom:8px">If one of you still wants to go: the winner picks, and pays from their own account.</div>
+      <div id="rpsInfo"></div>
+      <form id="rpsForm"><input id="rpsTopic" placeholder="What are we deciding? e.g. pizza vs. sushi" required><button>Start a round</button></form>
+      <ul id="rpsHist" class="feed"></ul>
+    </div>
+
     <form id="depForm" class="card">
       <h2>I saved money</h2>
       <input id="depAmt" inputmode="decimal" placeholder="Amount, e.g. 25.00" required>
@@ -68,6 +76,7 @@
       <input id="spAmt" inputmode="decimal" placeholder="Whole bill incl. tax &amp; tip" required>
       <select id="spCat"></select>
       <select id="spDate"></select>
+      <select id="spRps"></select>
       <input id="spNote" placeholder="Where / what (optional)">
       <label class="chk"><input id="spText" type="checkbox"> I texted first</label>
       <label class="chk"><input id="spSplit" type="checkbox"> Immunity: we said it at the same time (split 50/50)</label>

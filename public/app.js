@@ -35,15 +35,41 @@ function render() {
 
   const names = Object.fromEntries(standings.map((p) => [p.id, p.name]));
   renderDates(names);
+  renderRps(names);
   $('feed').innerHTML = state.feed.map((f) => {
     const mine = f.player_id === me && status === 'open' && !f.split_group;
     const what = f.kind === 'deposit' ? 'saved' : `spent (${esc(f.category)}${f.via === 'immunity' ? ', split' : ''})`;
+    const viaTxt = f.via === 'rps' ? ' <span class="badge">RPS win</span>' : '';
     const warn = f.kind === 'spend' && !f.texted_first && !f.is_gas ? '<span class="badge">no text first</span>' : '';
     return `<li><div class="row"><span><b>${esc(names[f.player_id])}</b> ${what} ${money(f.amount_cents)}
-      ${f.edited ? '<span class="badge">edited</span>' : ''}${warn}</span>
+      ${f.edited ? '<span class="badge">edited</span>' : ''}${viaTxt}${warn}</span>
       ${mine ? `<span><button class="ghost" data-edit="${f.kind}:${f.id}">edit</button><button class="ghost" data-del="${f.kind}:${f.id}">delete</button></span>` : ''}</div>
       <div class="mute">${esc(f.note || '')} ${new Date(f.created_at).toLocaleDateString()}</div></li>`;
   }).join('') || '<li class="mute">Nothing yet.</li>';
+}
+
+const EMOJI = { rock: '🪨', paper: '📄', scissors: '✂️' };
+function renderRps(names) {
+  const { rps, me, status } = state;
+  const open = status === 'open';
+  const cur = rps.find((r) => !r.resolved);
+  const done = rps.filter((r) => r.resolved);
+  if (cur) {
+    $('rpsInfo').innerHTML = `<div><b>${esc(cur.topic)}</b>${cur.ties ? ` <span class="badge">${cur.ties} tie${cur.ties > 1 ? 's' : ''}, go again</span>` : ''}</div>` +
+      (cur.i_moved ? `<div class="mute">Locked in. Waiting for the other person…</div>`
+        : `<div class="row" style="margin:8px 0">${['rock','paper','scissors'].map((m) => `<button data-move="${cur.id}:${m}" style="width:32%">${EMOJI[m]}<br>${m}</button>`).join('')}</div>` +
+          (cur.they_moved ? '<div class="mute">They have picked. Your turn.</div>' : ''))
+      + (open ? `<button class="ghost" data-rpscancel="${cur.id}">cancel round</button>` : '');
+  } else $('rpsInfo').innerHTML = '';
+  $('rpsForm').hidden = !(open && !cur);
+  $('rpsHist').innerHTML = done.slice(0, 5).map((r) => {
+    const a = r.p1_id;
+    const wm = r.winner_id === a ? r.p1_move : r.p2_move, lm = r.winner_id === a ? r.p2_move : r.p1_move;
+    return `<li><b>${esc(r.topic)}</b><div class="mute">${esc(names[r.winner_id])}'s ${EMOJI[wm]} beats ${EMOJI[lm]} · ${esc(names[r.winner_id])} picks &amp; pays${r.used ? ' · spend logged' : ''}</div></li>`;
+  }).join('');
+  const mine = done.filter((r) => r.winner_id === me && !r.used);
+  $('spRps').innerHTML = '<option value="">Not an RPS win</option>' + mine.map((r) => `<option value="${r.id}">I won RPS: ${esc(r.topic)}</option>`).join('');
+  $('spRps').hidden = !mine.length;
 }
 
 function renderDates(names) {
@@ -75,7 +101,7 @@ $('depForm').onsubmit = guard(async (e) => {
 });
 $('spendForm').onsubmit = guard(async (e) => {
   const amount_cents = toCents($('spAmt').value);
-  await api('/api/spends', 'POST', { amount_cents, category: $('spCat').value, note: $('spNote').value, texted_first: $('spText').checked, via: $('spSplit').checked ? 'immunity' : 'solo', date_id: $('spDate').value ? Number($('spDate').value) : null });
+  await api('/api/spends', 'POST', { amount_cents, category: $('spCat').value, note: $('spNote').value, texted_first: $('spText').checked, via: $('spRps').value ? 'rps' : $('spSplit').checked ? 'immunity' : 'solo', rps_round_id: $('spRps').value ? Number($('spRps').value) : undefined, date_id: $('spDate').value ? Number($('spDate').value) : null });
   e.target.reset();
 });
 $('feed').onclick = guard(async (e) => {
@@ -87,6 +113,13 @@ $('feed').onclick = guard(async (e) => {
     const note = prompt('Note', cur.note ?? ''); if (note === null) return;
     await api(url(k, id), 'PATCH', { amount_cents: toCents(amt), note });
   }
+});
+
+$('rpsForm').onsubmit = guard(async (e) => { await api('/api/rps', 'POST', { topic: $('rpsTopic').value }); e.target.reset(); });
+$('rpsCard').onclick = guard(async (e) => {
+  const mv = e.target.closest('[data-move]')?.dataset.move, cancel = e.target.dataset.rpscancel;
+  if (mv) { const [id, move] = mv.split(':'); await api(`/api/rps?id=${id}`, 'PATCH', { move }); }
+  if (cancel && confirm('Cancel this round?')) await api(`/api/rps?id=${cancel}`, 'DELETE');
 });
 
 $('dateForm').onsubmit = guard(async (e) => {

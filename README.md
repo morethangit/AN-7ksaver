@@ -12,7 +12,9 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
   inside its scope.
 - Whoever's idea it is pays from their own balance.
 - Immunity: said it at the same time -> whole bill splits 50/50 (odd cent to whoever logs it).
-- Rock-paper-scissors if one still wants to go; the winner picks **and pays**. *(phase 5)*
+- Rock-paper-scissors if one still wants to go: either player starts a round ("pizza vs. sushi"), both pick in
+  secret (the server never sends an unresolved pick to anyone, and picks are final), then it reveals. Ties replay.
+  The winner picks **and pays**: only they can log that round's spend (`via: rps`), once. One round at a time.
 - Text the other before spending: logged as a checkbox; spends without it get a "no text first" badge.
 - Window: `settings.start_date` (inclusive) to `settings.end_date` (exclusive). Outside it, nothing can be written.
   Seeded dates are **placeholders** (2027-05-15 / 2027-08-23) until both schools publish 2027 calendars.
@@ -31,4 +33,4 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 
 ## Layout
 `lib/game.js` pure rules (unit-tested) · `lib/db.js` SQL + audited writes · `lib/auth.js` PIN + signed cookie ·
-`api/` endpoints · `public/` the app · `db/schema.sql`.
+`api/` endpoints (state, login, deposits, spends, dates, rps, snapshot) · `public/` the app · `db/schema.sql`.

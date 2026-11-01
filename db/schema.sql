@@ -47,11 +47,24 @@ create table if not exists spends (
 );
 create table if not exists rps_rounds (
   id serial primary key,
-  spend_id integer references spends(id),
-  p1_move text, p2_move text,
+  topic text not null default '',
+  started_by integer references players(id),
+  p1_move text check (p1_move in ('rock','paper','scissors')),
+  p2_move text check (p2_move in ('rock','paper','scissors')),
+  ties integer not null default 0,
   winner_id integer references players(id),
-  resolved_at timestamptz
+  resolved_at timestamptz,
+  cancelled_at timestamptz
 );
+-- p1 = the lower player id. For databases migrated before phase 5:
+alter table rps_rounds add column if not exists topic text not null default '';
+alter table rps_rounds add column if not exists started_by integer references players(id);
+alter table rps_rounds add column if not exists ties integer not null default 0;
+alter table rps_rounds add column if not exists cancelled_at timestamptz;
+alter table rps_rounds drop column if exists spend_id;
+alter table spends add column if not exists rps_round_id integer references rps_rounds(id);
+create unique index if not exists spends_one_per_rps_round on spends (rps_round_id)
+  where rps_round_id is not null and deleted_at is null;
 create table if not exists audit_log (
   id bigserial primary key,
   table_name text not null,

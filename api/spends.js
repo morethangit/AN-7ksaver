@@ -1,6 +1,6 @@
 import { q, createRows, mutateRow } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
-import { gameStatus, validateSpend, checkSpendAgainstDate, isGas, CATEGORIES } from '../lib/game.js';
+import { gameStatus, validateSpend, checkSpendAgainstDate, checkRpsRound, isGas, CATEGORIES } from '../lib/game.js';
 
 export default async function handler(req, res) {
   const me = requireAuth(req, res);
@@ -21,8 +21,22 @@ export default async function handler(req, res) {
       const problem = checkSpendAgainstDate(v.rows[0].category, date);
       if (problem) return res.status(400).json({ error: problem });
     }
-    const rows = await createRows('spends', v.rows, me);
-    return res.status(201).json(rows);
+    if (v.rows[0].via === 'rps') {
+      const rid = v.rows[0].rps_round_id;
+      const [[round], [{ n }]] = await Promise.all([
+        q('SELECT * FROM rps_rounds WHERE id = $1', [rid]),
+        q('SELECT count(*)::int AS n FROM spends WHERE rps_round_id = $1 AND deleted_at IS NULL', [rid]),
+      ]);
+      const problem = checkRpsRound(round, me, n > 0);
+      if (problem) return res.status(400).json({ error: problem });
+    }
+    try {
+      return res.status(201).json(await createRows('spends', v.rows, me));
+    } catch (e) {
+      // Two taps at once on the same RPS round: the unique index lets only one through.
+      if (/unique|duplicate/i.test(e.message)) return res.status(409).json({ error: 'that round has already been used for a spend' });
+      throw e;
+    }
   }
 
   const id = Number.parseInt(req.query.id, 10);
