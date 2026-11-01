@@ -23,13 +23,18 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 - Edit/delete only your own rows. Deletes are soft. Every create/edit/delete writes `audit_log` (before/after) in the
   same SQL statement as the change.
 - Daily Vercel Cron snapshot + a "Save snapshot now" button -> `snapshots` table (90 days, then Sundays only).
+- **Restore:** `npm run restore list` · `npm run restore -- <id|latest>` (dry run: shows before/after row counts) ·
+  `npm run restore -- <id|latest> --apply`. It first saves the current state as a new snapshot (the undo point), then
+  replaces dates/RPS rounds/spends/deposits/audit log in ONE transaction, so a failure changes nothing. Snapshots never
+  hold PIN hashes, so the players must already exist with the same ids and names (`npm run seed`).
 - Known gap: immunity (split) rows can't be edited/deleted yet (409), since the two halves must change together.
 
 ## Setup
 1. Vercel: import this repo; add the **Neon** integration (sets `DATABASE_URL`).
 2. Env vars: `SESSION_SECRET` (`openssl rand -hex 32`), `CRON_SECRET`. See `.env.example`.
 3. Locally, with those in `.env`: `npm i && npm run migrate && NOLAN_PIN=… AURORA_PIN=… npm run seed`.
-4. `npm test`.
+4. `npm test` runs the pure-logic tests. To also run the database tests (real schema, SQL, API handlers, restore) point
+   `TEST_DATABASE_URL` at a throwaway Postgres: **it drops that database's `public` schema.** CI does this on every push.
 
 ## Layout
 `lib/game.js` pure rules (unit-tested) · `lib/db.js` SQL + audited writes · `lib/auth.js` PIN + signed cookie ·
