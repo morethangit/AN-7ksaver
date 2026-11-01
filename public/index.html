@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savings Showdown</title>
+<style>
+  :root { --bg:#fff7f3; --card:#fff; --ink:#2a2230; --mute:#7a6f80; --accent:#e0457b; --line:#f0dfe0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1d1822; --card:#2a2230; --ink:#f6eef2; --mute:#a99bb0; --line:#3d3345; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui,sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  h1 { font-size:22px; margin:8px 0 14px; } h2 { font-size:15px; margin:0 0 10px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+  .bar { height:10px; border-radius:6px; background:var(--line); overflow:hidden; margin:6px 0 2px; }
+  .bar > i { display:block; height:100%; background:var(--accent); }
+  .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .big { font-size:26px; font-weight:700; } .mute { color:var(--mute); font-size:13px; }
+  input, select, button { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); width:100%; margin-bottom:8px; }
+  button { background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+  button.ghost { background:none; color:var(--mute); width:auto; padding:2px 6px; margin:0; font-weight:400; }
+  label.chk { display:flex; gap:8px; align-items:center; margin-bottom:8px; } label.chk input { width:auto; margin:0; }
+  .feed li { list-style:none; padding:8px 0; border-top:1px solid var(--line); } ul { margin:0; padding:0; }
+  .badge { font-size:11px; background:var(--line); border-radius:8px; padding:1px 6px; margin-left:4px; }
+  .err { color:#c0392b; min-height:1.2em; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>💸 Savings Showdown</h1>
+  <div id="err" class="err" role="alert"></div>
+
+  <form id="login" class="card" hidden>
+    <h2>Sign in</h2>
+    <select id="who"><option>Nolan</option><option>Aurora</option></select>
+    <input id="pin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="current-password" required>
+    <button>Sign in</button>
+  </form>
+
+  <div id="game" hidden>
+    <div class="card" id="board"></div>
+
+    <form id="depForm" class="card">
+      <h2>I saved money</h2>
+      <input id="depAmt" inputmode="decimal" placeholder="Amount, e.g. 25.00" required>
+      <input id="depNote" placeholder="Note (optional)">
+      <button>Add savings</button>
+    </form>
+
+    <form id="spendForm" class="card">
+      <h2>I spent money</h2>
+      <input id="spAmt" inputmode="decimal" placeholder="Whole bill incl. tax &amp; tip" required>
+      <select id="spCat"></select>
+      <input id="spNote" placeholder="Where / what (optional)">
+      <label class="chk"><input id="spText" type="checkbox"> I texted first</label>
+      <label class="chk"><input id="spSplit" type="checkbox"> Immunity: we said it at the same time (split 50/50)</label>
+      <button>Log spend</button>
+    </form>
+
+    <div class="card"><h2>Activity</h2><ul id="feed" class="feed"></ul></div>
+    <button id="snap" class="ghost">Save snapshot now</button>
+    <button id="out" class="ghost">Sign out</button>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
