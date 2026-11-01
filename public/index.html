@@ -41,6 +41,21 @@
   <div id="game" hidden>
     <div class="card" id="board"></div>
 
+    <div class="card" id="dateCard">
+      <h2>Dates</h2>
+      <div id="dateInfo"></div>
+      <form id="dateForm" hidden>
+        <input id="dtTitle" placeholder="What's the plan? e.g. Taco night + mini golf" required>
+        <label class="chk"><input type="checkbox" name="scope" value="dinner"> Dinner</label>
+        <label class="chk"><input type="checkbox" name="scope" value="activity"> Activity</label>
+        <label class="chk"><input type="checkbox" name="scope" value="treat"> Sweet treat</label>
+        <input id="dtCap" inputmode="decimal" placeholder="Budget cap (optional)">
+        <input id="dtDay" type="date" aria-label="Date (optional)">
+        <button>Plan this date</button>
+      </form>
+      <ul id="dateHist" class="feed"></ul>
+    </div>
+
     <form id="depForm" class="card">
       <h2>I saved money</h2>
       <input id="depAmt" inputmode="decimal" placeholder="Amount, e.g. 25.00" required>
@@ -52,6 +67,7 @@
       <h2>I spent money</h2>
       <input id="spAmt" inputmode="decimal" placeholder="Whole bill incl. tax &amp; tip" required>
       <select id="spCat"></select>
+      <select id="spDate"></select>
       <input id="spNote" placeholder="Where / what (optional)">
       <label class="chk"><input id="spText" type="checkbox"> I texted first</label>
       <label class="chk"><input id="spSplit" type="checkbox"> Immunity: we said it at the same time (split 50/50)</label>

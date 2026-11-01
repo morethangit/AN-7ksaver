@@ -1,6 +1,6 @@
 import { q, createRows, mutateRow } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
-import { gameStatus, validateSpend, isGas, CATEGORIES } from '../lib/game.js';
+import { gameStatus, validateSpend, checkSpendAgainstDate, isGas, CATEGORIES } from '../lib/game.js';
 
 export default async function handler(req, res) {
   const me = requireAuth(req, res);
@@ -15,6 +15,12 @@ export default async function handler(req, res) {
     if (!other) return res.status(500).json({ error: 'second player missing: run npm run seed' });
     const v = validateSpend(req.body, me, other.id);
     if (v.error) return res.status(v.status ?? 400).json({ error: v.error });
+    const dateId = v.rows[0].date_id;
+    if (dateId !== null) {
+      const [date] = await q('SELECT * FROM dates WHERE id = $1', [dateId]);
+      const problem = checkSpendAgainstDate(v.rows[0].category, date);
+      if (problem) return res.status(400).json({ error: problem });
+    }
     const rows = await createRows('spends', v.rows, me);
     return res.status(201).json(rows);
   }

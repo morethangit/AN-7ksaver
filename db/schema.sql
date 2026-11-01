@@ -26,8 +26,10 @@ create table if not exists dates (
   scope text[] not null,
   budget_cap_cents integer,
   planned_for date,
-  status text not null default 'planned' check (status in ('planned','done','skipped'))
+  status text not null default 'planned' check (status in ('planned','done','skipped')),
+  deleted_at timestamptz
 );
+alter table dates add column if not exists deleted_at timestamptz;
 create table if not exists spends (
   id serial primary key,
   player_id integer not null references players(id),

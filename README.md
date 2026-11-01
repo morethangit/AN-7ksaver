@@ -6,7 +6,10 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 ## Rules (as built)
 - Score = money saved (starting $0 + deposits - spends). **No cap**: $7,000 is only a milestone badge.
 - All spending counts against you, **except gas**.
-- Dates alternate; each needs a plan with a scope (dinner and/or activity and/or sweet treat). *(phase 4)*
+- Dates alternate, starting with Nolan (coin flip). The planner must define the date first: a title and a scope of
+  dinner and/or activity and/or sweet treat (optional budget cap and day). Only one date is open at a time; either
+  person can mark it done or skipped. **A skipped date does not pass the turn.** A spend linked to a date must fall
+  inside its scope.
 - Whoever's idea it is pays from their own balance.
 - Immunity: said it at the same time -> whole bill splits 50/50 (odd cent to whoever logs it).
 - Rock-paper-scissors if one still wants to go; the winner picks **and pays**. *(phase 5)*

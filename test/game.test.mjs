@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit } from '../lib/game.js';
+import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate } from '../lib/game.js';
 import { signSession, verifySession, hashPin, verifyPin, readCookie } from '../lib/auth.js';
 
 const players = [{ id: 1, name: 'Nolan', starting_cents: 0 }, { id: 2, name: 'Aurora', starting_cents: 0 }];
@@ -78,4 +78,33 @@ test('PIN hashing round-trips', () => {
   const h = hashPin('1234');
   assert.ok(verifyPin('1234', h));
   assert.ok(!verifyPin('1235', h));
+});
+
+test('date turns alternate from the coin-flip winner; skips do not pass the turn', () => {
+  const ids = [1, 2];
+  assert.equal(nextPlanner(1, [], ids), 1);
+  assert.equal(nextPlanner(1, [{ status: 'done' }], ids), 2);
+  assert.equal(nextPlanner(1, [{ status: 'done' }, { status: 'done' }], ids), 1);
+  assert.equal(nextPlanner(1, [{ status: 'skipped' }], ids), 1);
+  assert.equal(nextPlanner(2, [{ status: 'planned' }], ids), 1);
+  assert.equal(nextPlanner(null, [], ids), 1);
+});
+
+test('a date needs a title and a valid scope', () => {
+  assert.ok(validateDate({ title: ' ', scope: ['dinner'] }).error);
+  assert.ok(validateDate({ title: 'x', scope: [] }).error);
+  assert.ok(validateDate({ title: 'x', scope: ['bowling'] }).error);
+  assert.ok(validateDate({ title: 'x', scope: ['dinner'], planned_for: '06/01/2027' }).error);
+  assert.ok(validateDate({ title: 'x', scope: ['dinner'], budget_cap_cents: 0 }).error);
+  const ok = validateDate({ title: ' Taco night ', scope: ['dinner', 'dinner', 'treat'], budget_cap_cents: 8000, planned_for: '2027-06-01' });
+  assert.deepEqual(ok.row, { title: 'Taco night', scope: ['dinner', 'treat'], budget_cap_cents: 8000, planned_for: '2027-06-01' });
+});
+
+test('spends tied to a date must fit its scope', () => {
+  const date = { scope: ['dinner', 'treat'], status: 'planned' };
+  assert.equal(checkSpendAgainstDate('dinner', date), null);
+  assert.match(checkSpendAgainstDate('activity', date), /scope/);
+  assert.ok(checkSpendAgainstDate('dinner', { ...date, status: 'skipped' }));
+  assert.ok(checkSpendAgainstDate('dinner', undefined));
+  assert.ok(checkSpendAgainstDate('dinner', { ...date, deleted_at: 'x' }));
 });
