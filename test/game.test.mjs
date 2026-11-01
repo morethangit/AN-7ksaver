@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate, rpsOutcome, sanitizeRound, checkRpsRound } from '../lib/game.js';
+import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate, rpsOutcome, sanitizeRound, checkRpsRound, balanceSeries, finalResult } from '../lib/game.js';
 import { signSession, verifySession, hashPin, verifyPin, readCookie } from '../lib/auth.js';
 
 const players = [{ id: 1, name: 'Nolan', starting_cents: 0 }, { id: 2, name: 'Aurora', starting_cents: 0 }];
@@ -145,4 +145,29 @@ test('rps spend charges the winner and needs a round id', () => {
   assert.ok(validateSpend({ amount_cents: 100, category: 'dinner', via: 'rps' }, 1, 2).error);
   const v = validateSpend({ amount_cents: 5000, category: 'dinner', via: 'rps', rps_round_id: 7 }, 2, 1);
   assert.deepEqual(v.rows.map((r) => [r.player_id, r.proposed_by, r.rps_round_id, r.via]), [[2, 2, 7, 'rps']]);
+});
+
+test('balanceSeries: cumulative per day, gas and deleted rows ignored', () => {
+  const series = balanceSeries({
+    players,
+    deposits: [
+      { player_id: 1, amount_cents: 10000, created_at: '2027-06-01T10:00:00Z' },
+      { player_id: 2, amount_cents: 5000, created_at: '2027-06-02T10:00:00Z' },
+      { player_id: 2, amount_cents: 9999, created_at: '2027-06-02T11:00:00Z', deleted_at: 'x' },
+    ],
+    spends: [
+      { player_id: 1, amount_cents: 2000, is_gas: false, created_at: '2027-06-02T12:00:00Z' },
+      { player_id: 1, amount_cents: 8000, is_gas: true, created_at: '2027-06-02T13:00:00Z' },
+    ],
+  });
+  assert.deepEqual(series, [
+    { day: '2027-06-01', balances: { 1: 10000, 2: 0 } },
+    { day: '2027-06-02', balances: { 1: 8000, 2: 5000 } },
+  ]);
+});
+
+test('finalResult: winner, margin and tie', () => {
+  assert.deepEqual(finalResult([{ id: 2, name: 'Aurora', saved_cents: 900 }, { id: 1, name: 'Nolan', saved_cents: 400 }]),
+    { tie: false, id: 2, name: 'Aurora', saved_cents: 900, margin_cents: 500 });
+  assert.deepEqual(finalResult([{ id: 1, saved_cents: 500 }, { id: 2, saved_cents: 500 }]), { tie: true, saved_cents: 500 });
 });

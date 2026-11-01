@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Savings Showdown</title>
+<meta name="theme-color" content="#e0457b">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Showdown">
 <style>
   :root { --bg:#fff7f3; --card:#fff; --ink:#2a2230; --mute:#7a6f80; --accent:#e0457b; --line:#f0dfe0; }
   @media (prefers-color-scheme: dark) { :root { --bg:#1d1822; --card:#2a2230; --ink:#f6eef2; --mute:#a99bb0; --line:#3d3345; } }
@@ -24,6 +30,11 @@
   .badge { font-size:11px; background:var(--line); border-radius:8px; padding:1px 6px; margin-left:4px; }
   .err { color:#c0392b; min-height:1.2em; }
   [hidden] { display:none !important; }
+  .rules { padding-left:18px; } .rules li { list-style:disc; margin:6px 0; } summary { cursor:pointer; font-weight:600; }
+  #winner { text-align:center; background:linear-gradient(135deg,#ffe3ee,#fff1c9); color:#2a2230; } #winner .big { font-size:30px; }
+  #chart svg { width:100%; height:auto; display:block; } .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px 0 10px; }
+  .acts { white-space:nowrap; flex-shrink:0; }
+  .split { font-size:13px; color:var(--mute); }
 </style>
 </head>
 <body>
@@ -39,8 +50,11 @@
   </form>
 
   <div id="game" hidden>
+    <div class="card" id="winner" hidden></div>
     <div class="card" id="board"></div>
+    <div class="card" id="chartCard" hidden><h2>Saved over time</h2><div id="chart"></div><div id="legend" class="mute"></div></div>
 
+    <div id="actions">
     <div class="card" id="dateCard">
       <h2>Dates</h2>
       <div id="dateInfo"></div>
@@ -83,7 +97,19 @@
       <button>Log spend</button>
     </form>
 
+    </div>
+
     <div class="card"><h2>Activity</h2><ul id="feed" class="feed"></ul></div>
+    <details class="card"><summary>Rules</summary>
+      <ul class="rules">
+        <li>Whoever has <b>saved the most</b> when the game ends wins. $7,000 is a milestone, not a finish line.</li>
+        <li>All spending comes out of your total. <b>Gas doesn't count.</b></li>
+        <li>Dates flip-flop. The planner defines it first: dinner and/or activity and/or a sweet treat.</li>
+        <li>Whoever's idea it is to spend pays from their own account.</li>
+        <li>Said the same place at the same time? <b>Immunity</b>: split the whole bill.</li>
+        <li>Still want to go? <b>Rock paper scissors.</b> The winner picks and pays.</li>
+        <li><b>Text the other person before you spend any money.</b></li>
+      </ul></details>
     <button id="snap" class="ghost">Save snapshot now</button>
     <button id="out" class="ghost">Sign out</button>
   </div>

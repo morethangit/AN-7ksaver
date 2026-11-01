@@ -110,7 +110,30 @@ test('spends: solo charges the logger, gas is ignored, immunity splits and is lo
   st = await state(NOLAN);
   assert.equal(saved(st, NOLAN), 44500);
   assert.equal(saved(st, AURORA), 36999);
-  assert.equal((await call(app.spends, { method: 'DELETE', as: AURORA, query: { id: String(imm.body[0].id) } })).status, 409);
+
+  // Either person in a split edits or deletes BOTH halves together.
+  const edit = await call(app.spends, { method: 'PATCH', as: NOLAN, query: { id: String(imm.body[1].id) }, body: { amount_cents: 8001, note: 'bigger bill' } });
+  assert.equal(edit.status, 200);
+  assert.deepEqual(edit.body.map((r) => [r.player_id, r.amount_cents, r.note]), [[AURORA, 4000, 'bigger bill'], [NOLAN, 4001, 'bigger bill']]); // odd cent to the editor
+  st = await state(NOLAN);
+  assert.equal(saved(st, NOLAN), 47500 - 4001);
+  assert.equal(saved(st, AURORA), 40000 - 4000);
+  const { rows: au } = await pool.query(`SELECT action FROM audit_log WHERE table_name='spends' AND row_id = ANY($1) ORDER BY id`, [imm.body.map((r) => r.id)]);
+  assert.deepEqual(au.map((r) => r.action), ['create', 'create', 'update', 'update']);
+
+  const del = await call(app.spends, { method: 'DELETE', as: AURORA, query: { id: String(imm.body[0].id) } });
+  assert.equal(del.status, 200);
+  assert.equal(del.body.length, 2);
+  st = await state(NOLAN);
+  assert.equal(saved(st, NOLAN), 47500);
+  assert.equal(saved(st, AURORA), 40000);
+  assert.equal((await call(app.spends, { method: 'DELETE', as: AURORA, query: { id: String(imm.body[0].id) } })).status, 404);
+
+  // Someone else's solo spend is not yours to touch.
+  const solo = await pool.query(`SELECT id FROM spends WHERE player_id = $1 AND via = 'solo' AND category = 'treat'`, [NOLAN]);
+  assert.equal((await call(app.spends, { method: 'PATCH', as: AURORA, query: { id: String(solo.rows[0].id) }, body: { note: 'x' } })).status, 404);
+  // Re-categorising is bounded by the date's scope (set up in the dates test below), so just check bad categories here.
+  assert.equal((await call(app.spends, { method: 'PATCH', as: NOLAN, query: { id: String(solo.rows[0].id) }, body: { category: 'nope' } })).status, 400);
 });
 
 test('dates: turn order, scope, one open date, scope-checked spends', { skip }, async () => {

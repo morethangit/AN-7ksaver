@@ -1,6 +1,6 @@
 import { q } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
-import { computeBalances, gameStatus, daysUntil, nextPlanner, sanitizeRound } from '../lib/game.js';
+import { computeBalances, gameStatus, daysUntil, nextPlanner, sanitizeRound, balanceSeries, finalResult } from '../lib/game.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
@@ -30,9 +30,13 @@ export default async function handler(req, res) {
     ...spends.map((s) => ({ kind: 'spend', edited: editedKeys.has(`spends:${s.id}`), ...s })),
   ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 100);
 
+  res.setHeader('Cache-Control', 'no-store');
+  const gs = gameStatus(settings);
   res.status(200).json({
     me,
-    status: gameStatus(settings),
+    status: gs,
+    result: gs === 'ended' ? finalResult(standings) : null,
+    series: balanceSeries({ players, deposits, spends }),
     days_to_start: daysUntil(settings.start_date),
     days_to_end: daysUntil(settings.end_date),
     settings,

@@ -27,7 +27,7 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
   `npm run restore -- <id|latest> --apply`. It first saves the current state as a new snapshot (the undo point), then
   replaces dates/RPS rounds/spends/deposits/audit log in ONE transaction, so a failure changes nothing. Snapshots never
   hold PIN hashes, so the players must already exist with the same ids and names (`npm run seed`).
-- Known gap: immunity (split) rows can't be edited/deleted yet (409), since the two halves must change together.
+- An immunity split is one bill stored as two rows: either person in it can edit (total re-split 50/50, odd cent to the editor) or delete it, and both halves change atomically.
 
 ## Setup
 1. Vercel: import this repo; add the **Neon** integration (sets `DATABASE_URL`).
@@ -35,6 +35,15 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 3. Locally, with those in `.env`: `npm i && npm run migrate && NOLAN_PIN=… AURORA_PIN=… npm run seed`.
 4. `npm test` runs the pure-logic tests. To also run the database tests (real schema, SQL, API handlers, restore) point
    `TEST_DATABASE_URL` at a throwaway Postgres: **it drops that database's `public` schema.** CI does this on every push.
+
+## Run it locally
+`DEV_DATABASE_URL=postgres://… npm run dev` (needs a Postgres with the schema applied and players seeded) serves
+`public/` and the `api/` handlers at http://localhost:3000. The browser tests (`test/e2e.test.mjs`, two people in two
+sessions) run automatically when `TEST_DATABASE_URL` is set and Playwright is installed.
+
+## Install on a phone
+It's a PWA: open the site, then Share -> Add to Home Screen (iOS) / Install (Android). The service worker is
+network-first and never caches `/api`, so balances always come from the server.
 
 ## Layout
 `lib/game.js` pure rules (unit-tested) · `lib/db.js` SQL + audited writes · `lib/auth.js` PIN + signed cookie ·
