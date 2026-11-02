@@ -35,7 +35,8 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 **https://an-7ksaver.vercel.app** · Vercel project `an-7ksaver` (deploys `main`) · Neon project `savings-showdown`.
 
 Every deploy runs `scripts/vercel-build.mjs`: it migrates the database (idempotent), and seeds/re-PINs the players only
-while `NOLAN_PIN` and `AURORA_PIN` are set in Vercel. **To change a PIN:** add both variables in Vercel, redeploy,
+while `NOLAN_PIN` and `AURORA_PIN` are set in Vercel. **To move the game window without a terminal:** set `GAME_START_DATE` and `GAME_END_DATE` (YYYY-MM-DD) in Vercel and
+redeploy; every deploy enforces them while they exist. **To change a PIN:** add both variables in Vercel, redeploy,
 then delete them again. The other scripts (`set-dates`, `reset-game`, `restore`) need the production `DATABASE_URL`
 locally: `npx vercel env pull .env` (or copy it from the Neon console), then e.g. `node --env-file=.env scripts/set-dates.mjs …`.
 
