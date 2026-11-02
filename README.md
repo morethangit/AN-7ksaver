@@ -31,7 +31,15 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
   hold PIN hashes, so the players must already exist with the same ids and names (`npm run seed`).
 - An immunity split is one bill stored as two rows: either person in it can edit (total re-split 50/50, odd cent to the editor) or delete it, and both halves change atomically.
 
-## Setup
+## Live
+**https://an-7ksaver.vercel.app** · Vercel project `an-7ksaver` (deploys `main`) · Neon project `savings-showdown`.
+
+Every deploy runs `scripts/vercel-build.mjs`: it migrates the database (idempotent), and seeds/re-PINs the players only
+while `NOLAN_PIN` and `AURORA_PIN` are set in Vercel. **To change a PIN:** add both variables in Vercel, redeploy,
+then delete them again. The other scripts (`set-dates`, `reset-game`, `restore`) need the production `DATABASE_URL`
+locally: `npx vercel env pull .env` (or copy it from the Neon console), then e.g. `node --env-file=.env scripts/set-dates.mjs …`.
+
+## Setup (from scratch)
 1. Vercel: import this repo; add the **Neon** integration (sets `DATABASE_URL`).
 2. Env vars: `SESSION_SECRET` (`openssl rand -hex 32`), `CRON_SECRET`. See `.env.example`.
 3. Locally, with those in `.env`: `npm i && npm run migrate && NOLAN_PIN=… AURORA_PIN=… npm run seed`.
