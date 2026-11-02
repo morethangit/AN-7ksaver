@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeBalances, splitCents, gameStatus, daysUntil, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate, rpsOutcome, sanitizeRound, checkRpsRound, balanceSeries, finalResult } from '../lib/game.js';
+import { computeBalances, splitCents, gameStatus, daysUntil, todayIn, validateSpend, validateDeposit, nextPlanner, validateDate, checkSpendAgainstDate, rpsOutcome, sanitizeRound, checkRpsRound, balanceSeries, finalResult } from '../lib/game.js';
 import { signSession, verifySession, hashPin, verifyPin, readCookie } from '../lib/auth.js';
 
 const players = [{ id: 1, name: 'Nolan', starting_cents: 0 }, { id: 2, name: 'Aurora', starting_cents: 0 }];
@@ -33,12 +33,12 @@ test('splitCents gives the odd cent to the logger and always sums', () => {
 });
 
 test('game window: start inclusive, end exclusive', () => {
-  const s = { start_date: '2027-05-15', end_date: '2027-08-23' };
+  const s = { start_date: '2027-05-15', end_date: '2027-08-23', timezone: 'UTC' };
   assert.equal(gameStatus(s, new Date('2027-05-14T12:00:00Z')), 'prelaunch');
   assert.equal(gameStatus(s, new Date('2027-05-15T00:00:00Z')), 'open');
   assert.equal(gameStatus(s, new Date('2027-08-22T23:59:00Z')), 'open');
   assert.equal(gameStatus(s, new Date('2027-08-23T00:00:00Z')), 'ended');
-  assert.equal(daysUntil('2027-05-15', new Date('2027-05-10T09:00:00Z')), 5);
+  assert.equal(daysUntil('2027-05-15', new Date('2027-05-10T09:00:00Z'), 'UTC'), 5);
 });
 
 test('solo spend charges the proposer; gas is flagged', () => {
@@ -170,4 +170,16 @@ test('finalResult: winner, margin and tie', () => {
   assert.deepEqual(finalResult([{ id: 2, name: 'Aurora', saved_cents: 900 }, { id: 1, name: 'Nolan', saved_cents: 400 }]),
     { tie: false, id: 2, name: 'Aurora', saved_cents: 900, margin_cents: 500 });
   assert.deepEqual(finalResult([{ id: 1, saved_cents: 500 }, { id: 2, saved_cents: 500 }]), { tie: true, saved_cents: 500 });
+});
+
+test('the game window follows the players\' timezone, not UTC', () => {
+  const s = { start_date: '2027-05-15', end_date: '2027-08-23', timezone: 'America/New_York' };
+  // 03:00 UTC on the 15th is still 11pm on the 14th in Ohio (EDT): not started yet.
+  assert.equal(gameStatus(s, new Date('2027-05-15T03:00:00Z')), 'prelaunch');
+  assert.equal(gameStatus(s, new Date('2027-05-15T05:00:00Z')), 'open');
+  // 02:00 UTC on Aug 23 is still the evening of Aug 22 in Ohio: the last day is not over.
+  assert.equal(gameStatus(s, new Date('2027-08-23T02:00:00Z')), 'open');
+  assert.equal(gameStatus(s, new Date('2027-08-23T05:00:00Z')), 'ended');
+  assert.equal(gameStatus({ ...s, timezone: undefined }, new Date('2027-05-15T03:00:00Z')), 'prelaunch', 'defaults to Eastern');
+  assert.equal(todayIn('Pacific/Auckland', new Date('2027-05-14T20:00:00Z')), '2027-05-15');
 });

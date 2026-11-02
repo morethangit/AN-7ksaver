@@ -234,4 +234,33 @@ test('cron endpoint: refuses without the bearer secret, snapshots with it', { sk
   assert.equal((await call(app.cron, { headers: { authorization: 'Bearer cron-secret-123' } })).status, 200);
 });
 
+test('scripts: set-dates validates and updates; reset-game needs --yes, snapshots, then clears', { skip }, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const run = (script, ...args) => spawnSync(process.execPath, [`scripts/${script}`, ...args], { env: { ...process.env, LOCAL_PG_URL: URL_ }, encoding: 'utf8' });
+
+  assert.notEqual(run('set-dates.mjs', '2027-08-23', '2027-05-15').status, 0, 'start must precede end');
+  assert.notEqual(run('set-dates.mjs', 'soon', 'later').status, 0);
+  assert.notEqual(run('set-dates.mjs', '2027-05-15', '2027-08-23', 'Mars/Phobos').status, 0, 'bad timezone');
+  const ok = run('set-dates.mjs', '2027-05-17', '2027-08-24', 'America/Chicago');
+  assert.equal(ok.status, 0, ok.stderr);
+  const { rows: [s] } = await pool.query('SELECT start_date::text, end_date::text, timezone FROM settings');
+  assert.deepEqual(s, { start_date: '2027-05-17', end_date: '2027-08-24', timezone: 'America/Chicago' });
+  await pool.query('UPDATE settings SET start_date = $1, end_date = $2', [days(-1), days(60)]); // reopen for what follows
+
+  const before = (await pool.query('SELECT count(*)::int AS n FROM deposits')).rows[0].n;
+  assert.ok(before > 0);
+  assert.notEqual(run('reset-game.mjs').status, 0, 'refuses without --yes');
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM deposits')).rows[0].n, before, 'nothing deleted without --yes');
+  const snaps = (await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n;
+  const reset = run('reset-game.mjs', '--yes');
+  assert.equal(reset.status, 0, reset.stderr);
+  for (const t of ['deposits', 'spends', 'dates', 'rps_rounds', 'audit_log']) {
+    assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ${t}`)).rows[0].n, 0, `${t} cleared`);
+  }
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM snapshots')).rows[0].n, snaps + 1, 'a safety snapshot was taken first');
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM players')).rows[0].n, 2, 'players kept');
+  const fresh = await call(app.deposits, { method: 'POST', as: NOLAN, body: { amount_cents: 100 } });
+  assert.equal(fresh.body.id, 1, 'ids restart after a reset');
+});
+
 test('teardown', { skip }, async () => { await pool.end(); });

@@ -16,8 +16,10 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
   secret (the server never sends an unresolved pick to anyone, and picks are final), then it reveals. Ties replay.
   The winner picks **and pays**: only they can log that round's spend (`via: rps`), once. One round at a time.
 - Text the other before spending: logged as a checkbox; spends without it get a "no text first" badge.
-- Window: `settings.start_date` (inclusive) to `settings.end_date` (exclusive). Outside it, nothing can be written.
-  Seeded dates are **placeholders** (2027-05-15 / 2027-08-23) until both schools publish 2027 calendars.
+- Window: `settings.start_date` (inclusive) to `settings.end_date` (exclusive), judged in `settings.timezone`
+  (default `America/New_York`, so it opens at midnight Ohio time, not 8pm the night before). Outside it nothing can be written.
+  Seeded dates are **placeholders** (2027-05-15 / 2027-08-23) until both schools publish 2027 calendars; set the real ones with
+  `npm run set-dates -- 2027-05-17 2027-08-24 [timezone]` (start = first day logging is open, end = first day of fall classes).
 
 ## Edits, history, backups
 - Edit/delete only your own rows. Deletes are soft. Every create/edit/delete writes `audit_log` (before/after) in the
@@ -35,6 +37,11 @@ Static HTML in `public/`, Vercel serverless functions in `api/`, Neon Postgres.
 3. Locally, with those in `.env`: `npm i && npm run migrate && NOLAN_PIN=… AURORA_PIN=… npm run seed`.
 4. `npm test` runs the pure-logic tests. To also run the database tests (real schema, SQL, API handlers, restore) point
    `TEST_DATABASE_URL` at a throwaway Postgres: **it drops that database's `public` schema.** CI does this on every push.
+
+## Trying it out before the real start
+Logging is closed until the start date, so to test the live site: `npm run set-dates -- <today> 2027-12-31`, play with it
+(both phones, every feature), then **wipe it**: `npm run reset-game -- --yes` (saves a snapshot first, keeps the players,
+PINs and settings), and finally `npm run set-dates -- <real start> <real end>`.
 
 ## Run it locally
 `DEV_DATABASE_URL=postgres://… npm run dev` (needs a Postgres with the schema applied and players seeded) serves

@@ -159,7 +159,8 @@ test('the game can be over or not started: forms vanish, winner shows', { skip }
   assert.equal(await nolan.locator('#feed [data-del]').count(), 0, 'no edits after the game ends');
   if (SHOTS) await nolan.screenshot({ path: `${SHOTS}/ended.png`, fullPage: true });
   await pool.query('UPDATE settings SET start_date = $1, end_date = $2', [day(30), day(90)]);
-  await nolan.reload(); await nolan.waitForFunction(() => document.getElementById('board').innerText.includes('Game starts in 30 days'));
+  await nolan.reload(); // Days are counted in Eastern time, so depending on the hour this is 29-31 when the seed used UTC dates.
+  await nolan.waitForFunction(() => /Game starts in (29|30|31) days/.test(document.getElementById('board').innerText));
   assert.equal(await nolan.locator('#actions').isHidden(), true);
 });
 

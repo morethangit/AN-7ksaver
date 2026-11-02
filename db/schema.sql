@@ -9,8 +9,10 @@ create table if not exists settings (
   start_date date not null,
   end_date date not null,
   milestone_cents integer not null default 700000,
-  first_date_planner_id integer references players(id)
+  first_date_planner_id integer references players(id),
+  timezone text not null default 'America/New_York'
 );
+alter table settings add column if not exists timezone text not null default 'America/New_York';
 create table if not exists deposits (
   id serial primary key,
   player_id integer not null references players(id),

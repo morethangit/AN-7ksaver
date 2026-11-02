@@ -1,5 +1,6 @@
 import { q, createRows } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
+import { loadSettings } from '../lib/settings.js';
 import { gameStatus, MOVES, rpsOutcome, sanitizeRound, cleanTopic } from '../lib/game.js';
 
 // One audited step on an open round. Params: $1 id, $2 actor, $3 event, then `extra`.
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
   const me = requireAuth(req, res);
   if (me === null) return;
 
-  const [settings] = await q('SELECT start_date::text, end_date::text FROM settings');
+  const settings = await loadSettings();
   const status = settings ? gameStatus(settings) : 'prelaunch';
   if (status !== 'open') return res.status(403).json({ error: `game is ${status}; nothing can be changed` });
 

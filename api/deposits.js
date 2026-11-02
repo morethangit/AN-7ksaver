@@ -1,12 +1,13 @@
 import { q, createRows, mutateRow } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
+import { loadSettings } from '../lib/settings.js';
 import { gameStatus, validateDeposit } from '../lib/game.js';
 
 export default async function handler(req, res) {
   const me = requireAuth(req, res);
   if (me === null) return;
 
-  const [settings] = await q('SELECT start_date::text, end_date::text FROM settings');
+  const settings = await loadSettings();
   const status = settings ? gameStatus(settings) : 'prelaunch';
   if (status !== 'open') return res.status(403).json({ error: `game is ${status}; nothing can be changed` });
 

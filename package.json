@@ -11,7 +11,9 @@
     "migrate": "node scripts/migrate.mjs",
     "seed": "node scripts/seed.mjs",
     "restore": "node scripts/restore.mjs",
-    "dev": "node scripts/dev-server.mjs"
+    "dev": "node scripts/dev-server.mjs",
+    "set-dates": "node scripts/set-dates.mjs",
+    "reset-game": "node scripts/reset-game.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0"

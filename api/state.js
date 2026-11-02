@@ -1,5 +1,6 @@
 import { q } from '../lib/db.js';
 import { requireAuth } from '../lib/auth.js';
+import { loadSettings } from '../lib/settings.js';
 import { computeBalances, gameStatus, daysUntil, nextPlanner, sanitizeRound, balanceSeries, finalResult } from '../lib/game.js';
 
 export default async function handler(req, res) {
@@ -7,9 +8,9 @@ export default async function handler(req, res) {
   const me = requireAuth(req, res);
   if (me === null) return;
 
-  const [players, [settings], deposits, spends, edited, dates, rounds] = await Promise.all([
+  const [players, settings, deposits, spends, edited, dates, rounds] = await Promise.all([
     q('SELECT id, name, starting_cents FROM players ORDER BY id'),
-    q('SELECT start_date::text, end_date::text, milestone_cents, first_date_planner_id FROM settings'),
+    loadSettings(),
     q('SELECT * FROM deposits WHERE deleted_at IS NULL ORDER BY created_at DESC'),
     q('SELECT * FROM spends WHERE deleted_at IS NULL ORDER BY created_at DESC'),
     q(`SELECT DISTINCT table_name, row_id FROM audit_log WHERE action = 'update'`),
@@ -37,8 +38,8 @@ export default async function handler(req, res) {
     status: gs,
     result: gs === 'ended' ? finalResult(standings) : null,
     series: balanceSeries({ players, deposits, spends }),
-    days_to_start: daysUntil(settings.start_date),
-    days_to_end: daysUntil(settings.end_date),
+    days_to_start: daysUntil(settings.start_date, new Date(), settings.timezone),
+    days_to_end: daysUntil(settings.end_date, new Date(), settings.timezone),
     settings,
     standings,
     leader_gap_cents: standings.length > 1 ? standings[0].saved_cents - standings[1].saved_cents : 0,
